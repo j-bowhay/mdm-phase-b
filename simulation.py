@@ -18,6 +18,7 @@ class PackingMethod(ABC):
         self.ri: np.ndarray | None = None
         self.source_nodes: np.ndarray | None = None
         self.sink_nodes: np.ndarray | None = None
+        self.pairs: set | None = None
 
     @abstractmethod
     def generate_packing(self, r: float) -> None:
@@ -40,7 +41,7 @@ class PackingMethod(ABC):
         ax.set_xlim((0, 1))
         ax.set_ylim((0, 1))
         ax.set_aspect("equal")
-    
+
     def _check_packing_created(self) -> None:
         if self.xi is None:
             raise ValueError("Need to generate packing first.")
@@ -55,21 +56,35 @@ class PackingMethod(ABC):
     def generate_network(self) -> None:
         """Create the network representation of the packing."""
         self._check_packing_created()
-        
+
         # find which nodes are sources and which are sinks
         self.source_nodes = np.argwhere(np.abs(self.xi[:, 1] - 1) <= self.ri).squeeze()
         self.sink_nodes = np.argwhere(np.abs(self.xi[:, 1]) <= self.ri).squeeze()
-        
-        adjacency = np.zeros((self.n, self.n))
+
         tree = scipy.spatial.KDTree(self.xi)
+        self.pairs = tree.query_pairs(r=2 * self.ri[0], eps=1e-3)
+
+    def _check_network_created(self) -> None:
+        if self.pairs is None:
+            raise ValueError("Need to generate network first.")
 
     def plot_network(self) -> None:
         """Plot network representation of the packing."""
+        self._check_network_created()
+
         fig, ax = plt.subplots()
+        # set the source and sink nodes to different colors
         colors = np.repeat("tab:blue", self.n).astype("object")
         colors[self.sink_nodes] = "tab:red"
         colors[self.source_nodes] = "tab:green"
+
         self._add_node_patches(ax, colors)
+
+        # plot the network over the top of the patches
+        for (i, j) in self.pairs:
+            plt.plot(
+                [self.xi[i, 0], self.xi[j, 0]], [self.xi[i, 1], self.xi[j, 1]], "-w"
+            )
         ax.plot(self.xi[:, 0], self.xi[:, 1], "k.", markersize=10)
         plt.show()
 

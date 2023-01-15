@@ -112,17 +112,29 @@ class PackingMethod(ABC):
         # flux into the material
         b = np.zeros((self.n, 1))
         b.put(self.source_nodes, total_flux_in / self.source_nodes.size)
-
-        # ground sink nodes
-        LHS = np.delete(
-            np.delete(LHS, self.sink_nodes, axis=0), self.sink_nodes, axis=1
-        )
         b = np.delete(b, self.sink_nodes, axis=0)
-
         temps = np.linalg.solve(LHS, b)
 
         # put the temps of the sink nodes back in
         self.temps = np.insert(temps, self.sink_nodes, 0)
+        
+    def _check_solved(self) -> None:
+        if self.temps is None:
+            raise ValueError("Network must be solved first")
+    
+    def plot_solution(self) -> None:
+        """Plot the temperature of each node in the material"""
+        self._check_solved()
+        
+        cmap = plt.colormaps["plasma"]
+        colors = cmap(self.temps/np.amax(self.temps))
+        
+        fig, ax = plt.subplots()
+        self._add_node_patches(ax, colors)
+        fig.colorbar(plt.cm.ScalarMappable(cmap=cmap),
+             ax=ax, label="Relative Temperature")
+        plt.show()
+        
 
 
 class RegularPacking(PackingMethod):
@@ -134,6 +146,8 @@ class RegularPacking(PackingMethod):
         r : float
             radius of circles
         """
+        if 1/r != int(1/r):
+            raise ValueError("Bad radius, cannot pack unit square")
         self.n = int(1 / (2 * r)) ** 2
 
         tmp = np.arange(r, 1, 2 * r)
@@ -143,8 +157,9 @@ class RegularPacking(PackingMethod):
 
 if __name__ == "__main__":
     p = RegularPacking()
-    p.generate_packing(0.05)
+    p.generate_packing(0.1)
     p.plot_packing()
     p.generate_network()
     p.plot_network()
-    p.solve_network(1)
+    p.solve_network()
+    p.plot_solution()

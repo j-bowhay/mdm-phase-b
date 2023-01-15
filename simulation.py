@@ -19,6 +19,7 @@ class PackingMethod(ABC):
         self.source_nodes: np.ndarray | None = None
         self.sink_nodes: np.ndarray | None = None
         self.pairs: set | None = None
+        self.temps: np.ndarray | None = None
 
     @abstractmethod
     def generate_packing(self, r: float) -> None:
@@ -88,6 +89,41 @@ class PackingMethod(ABC):
         ax.plot(self.xi[:, 0], self.xi[:, 1], "k.", markersize=10)
         plt.show()
 
+    def _get_conductivity_matrix(self) -> np.ndarray:
+        # TODO: use analytic formula!
+        return np.eye(len(self.pairs), len(self.pairs))
+
+    def solve_network(self, total_flux_in: float = 1.0) -> None:
+        """Solve for the temperature in the network
+
+        Parameters
+        ----------
+        total_flux_in : float
+            The total amount of flux going into the material
+        """
+        self._check_network_created()
+        graph = nx.from_edgelist(self.pairs)
+
+        # create the oriented incidence matrix
+        A = nx.incidence_matrix(graph, oriented=True).todense().T
+        K = self._get_conductivity_matrix()
+
+        LHS = A.T @ K @ A
+        # flux into the material
+        b = np.zeros((self.n, 1))
+        b.put(self.source_nodes, total_flux_in / self.source_nodes.size)
+
+        # ground sink nodes
+        LHS = np.delete(
+            np.delete(LHS, self.sink_nodes, axis=0), self.sink_nodes, axis=1
+        )
+        b = np.delete(b, self.sink_nodes, axis=0)
+
+        temps = np.linalg.solve(LHS, b)
+
+        # put the temps of the sink nodes back in
+        self.temps = np.insert(temps, self.sink_nodes, 0)
+
 
 class RegularPacking(PackingMethod):
     def generate_packing(self, r: float) -> None:
@@ -111,3 +147,4 @@ if __name__ == "__main__":
     p.plot_packing()
     p.generate_network()
     p.plot_network()
+    p.solve_network(1)

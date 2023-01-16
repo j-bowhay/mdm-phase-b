@@ -117,24 +117,24 @@ class PackingMethod(ABC):
 
         # put the temps of the sink nodes back in
         self.temps = np.insert(temps, self.sink_nodes, 0)
-        
+
     def _check_solved(self) -> None:
         if self.temps is None:
             raise ValueError("Network must be solved first")
-    
+
     def plot_solution(self) -> None:
         """Plot the temperature of each node in the material"""
         self._check_solved()
-        
+
         cmap = plt.colormaps["plasma"]
-        colors = cmap(self.temps/np.amax(self.temps))
-        
+        colors = cmap(self.temps / np.amax(self.temps))
+
         fig, ax = plt.subplots()
         self._add_node_patches(ax, colors)
-        fig.colorbar(plt.cm.ScalarMappable(cmap=cmap),
-             ax=ax, label="Relative Temperature")
+        fig.colorbar(
+            plt.cm.ScalarMappable(cmap=cmap), ax=ax, label="Relative Temperature"
+        )
         plt.show()
-        
 
 
 class RegularPacking(PackingMethod):
@@ -146,7 +146,7 @@ class RegularPacking(PackingMethod):
         r : float
             radius of circles
         """
-        if 1/r != int(1/r):
+        if 1 / r != int(1 / r):
             raise ValueError("Bad radius, cannot pack unit square")
         self.n = int(1 / (2 * r)) ** 2
 
@@ -155,11 +155,27 @@ class RegularPacking(PackingMethod):
         self.ri = np.asarray([r for _ in range(self.n)])
 
 
+class OffsetRegularPacking(RegularPacking):
+    def generate_packing(self, r: float) -> None:
+        # TODO: make this fill the top row
+
+        # start with the regular packing
+        super().generate_packing(r)
+
+        # shift odd rows
+        for i in range(3, self.n, 2):
+            self.xi[self.xi[:, 1] == r * i, 0] += r
+
+        # squash everything down
+        self.xi[:, 1] -= (2 - np.sqrt(3)) * r * ((self.xi[:, 1] - r) / (2 * r))
+
+
 if __name__ == "__main__":
-    p = RegularPacking()
+    # p = RegularPacking()
+    p = OffsetRegularPacking()
     p.generate_packing(0.1)
     p.plot_packing()
     p.generate_network()
     p.plot_network()
-    p.solve_network()
-    p.plot_solution()
+    # p.solve_network()
+    # p.plot_solution()

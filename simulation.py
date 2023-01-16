@@ -147,37 +147,45 @@ class RegularPacking(PackingMethod):
             radius of circles
         """
         self._generate_packing(r)
+        self._post_packing(r)
 
     def _generate_packing(self, r: float, lim: tuple[float, float] = (0, 1)) -> None:
         tmp = r + np.arange(lim[0], lim[1], 2 * r)
         self.xi = np.array(np.meshgrid(tmp, tmp)).T.reshape(-1, 2)
+
+    def _post_packing(self, r: float) -> None:
         self.n = self.xi.shape[0]
         self.ri = np.asarray([r for _ in range(self.n)])
 
 
 class OffsetRegularPacking(RegularPacking):
     def generate_packing(self, r: float) -> None:
-        # TODO: make this fill the top row
-
         # start with the regular packing
-        self._generate_packing(r)
+        self._generate_packing(r, (-2 * r, 1 + r))
 
         # shift odd rows
-        for i in range(3, self.n, 4):
-            self.xi[self.xi[:, 1] == r * i, 0] += r
+        for i in range(-1, self.xi.shape[0], 4):
+            self.xi[np.isclose(self.xi[:, 1], r * i), 0] += r
 
         # squash everything down
         self.xi[:, 1] -= (2 - np.sqrt(3)) * r * ((self.xi[:, 1] - r) / (2 * r))
 
+        # trim off excess points
+        self.xi = self.xi[
+            (self.xi[:, 1] > 0) & (self.xi[:, 0] > -r) & (self.xi[:, 0] < 1 + r)
+        ]
+
+        self._post_packing(r)
+
 
 if __name__ == "__main__":
-    p = RegularPacking()
-    p.generate_packing(0.1)
-    p.plot_packing()
+    # p = RegularPacking()
+    # p.generate_packing(0.1)
+    # p.plot_packing()
     p = OffsetRegularPacking()
     p.generate_packing(0.1)
     p.plot_packing()
-    # p.generate_network()
-    # p.plot_network()
+    p.generate_network()
+    p.plot_network()
     # p.solve_network()
     # p.plot_solution()

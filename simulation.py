@@ -146,12 +146,12 @@ class RegularPacking(PackingMethod):
         r : float
             radius of circles
         """
-        if 1 / r != int(1 / r):
-            raise ValueError("Bad radius, cannot pack unit square")
-        self.n = int(1 / (2 * r)) ** 2
+        self._generate_packing(r)
 
-        tmp = np.arange(r, 1, 2 * r)
+    def _generate_packing(self, r: float, lim: tuple[float, float] = (0, 1)):
+        tmp = r + np.arange(lim[0], lim[1], 2 * r)
         self.xi = np.array(np.meshgrid(tmp, tmp)).T.reshape(-1, 2)
+        self.n = self.xi.shape[0]
         self.ri = np.asarray([r for _ in range(self.n)])
 
 
@@ -160,7 +160,7 @@ class OffsetRegularPacking(RegularPacking):
         # TODO: make this fill the top row
 
         # start with the regular packing
-        super().generate_packing(r)
+        self.generate_packing(r)
 
         # shift odd rows
         for i in range(3, self.n, 2):
@@ -171,9 +171,9 @@ class OffsetRegularPacking(RegularPacking):
 
 
 if __name__ == "__main__":
-    # p = RegularPacking()
-    p = OffsetRegularPacking()
-    p.generate_packing(0.1)
+    p = RegularPacking()
+    # p = OffsetRegularPacking()
+    p.generate_packing(0.12)
     p.plot_packing()
     p.generate_network()
     p.plot_network()

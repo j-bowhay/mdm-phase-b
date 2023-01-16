@@ -148,7 +148,7 @@ class RegularPacking(PackingMethod):
         """
         self._generate_packing(r)
 
-    def _generate_packing(self, r: float, lim: tuple[float, float] = (0, 1)):
+    def _generate_packing(self, r: float, lim: tuple[float, float] = (0, 1)) -> None:
         tmp = r + np.arange(lim[0], lim[1], 2 * r)
         self.xi = np.array(np.meshgrid(tmp, tmp)).T.reshape(-1, 2)
         self.n = self.xi.shape[0]
@@ -160,10 +160,10 @@ class OffsetRegularPacking(RegularPacking):
         # TODO: make this fill the top row
 
         # start with the regular packing
-        self.generate_packing(r)
+        self._generate_packing(r)
 
         # shift odd rows
-        for i in range(3, self.n, 2):
+        for i in range(3, self.n, 4):
             self.xi[self.xi[:, 1] == r * i, 0] += r
 
         # squash everything down
@@ -172,10 +172,12 @@ class OffsetRegularPacking(RegularPacking):
 
 if __name__ == "__main__":
     p = RegularPacking()
-    # p = OffsetRegularPacking()
-    p.generate_packing(0.12)
+    p.generate_packing(0.1)
     p.plot_packing()
-    p.generate_network()
-    p.plot_network()
+    p = OffsetRegularPacking()
+    p.generate_packing(0.1)
+    p.plot_packing()
+    # p.generate_network()
+    # p.plot_network()
     # p.solve_network()
     # p.plot_solution()

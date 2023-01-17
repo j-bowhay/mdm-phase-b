@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import random
 
 import scipy
 import numpy as np
@@ -208,7 +207,16 @@ def _make_disk(r):
 
 
 class LowestPointFirst(PackingMethod):
-    def generate_packing(self, r: float, n_points: int = 1000, max_iter: int = 1000, debug: bool = False) -> None:
+    def generate_packing(
+        self,
+        r: float,
+        n_points: int = 1000,
+        max_iter: int = 1000,
+        debug: bool = False,
+        random_state: np.random.Generator = None,
+    ) -> None:
+        if random_state is None:
+            random_state = np.random.default_rng()
         self.xi = np.ndarray((0, 2))
         # scale the radius to the size of discretisation
         r = int(r * n_points)
@@ -229,8 +237,8 @@ class LowestPointFirst(PackingMethod):
             # Only want to consider those lowest locations
             options = np.where(i == i.min())[0]
             # Choose one at at random
-            chosen_loc = np.random.randint(len(options))
-            cen = np.vstack([i[options[chosen_loc]] + i_min, j[options[chosen_loc]]])
+            choice = random_state.choice(options)
+            cen = np.vstack([i[choice] + i_min, j[choice]])
             # mask off area resulting from our choice
             possible_locs = _insert_disks_at_points(possible_locs, coords=cen, r=2 * r)
             self.xi = np.append(self.xi, cen.T / n_points, axis=0)

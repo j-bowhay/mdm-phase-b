@@ -179,6 +179,32 @@ class OffsetRegularPacking(RegularPacking):
         self._post_packing(r)
 
 
+def _insert_disks_at_points(im, coords, r):
+    """
+    Insert disk of specified radius into an ND-image at given locations.
+    """
+    xlim, ylim = im.shape
+    s = _make_disk(r)
+    pt = coords.squeeze()
+    for a, x in enumerate(range(pt[0] - r, pt[0] + r + 1)):
+        if (x >= 0) and (x < xlim):
+            for b, y in enumerate(range(pt[1] - r, pt[1] + r + 1)):
+                if (y >= 0) and (y < ylim):
+                    if s[a, b] == 1:
+                        im[x, y] = 0
+    return im
+
+def _make_disk(r):
+    """
+    Generate a circular disk of the given radius
+    """
+    s = np.zeros((2 * r + 1, 2 * r + 1), dtype=type(r))
+    for i in range(2 * r + 1):
+        for j in range(2 * r + 1):
+            if ((i - r) ** 2 + (j - r) ** 2) ** 0.5 <= r:
+                s[i, j] = 1
+    return s
+
 class GravityPacking(PackingMethod):
     def generate_packing(self, r: float) -> None:
         self.xi = np.ndarray((0, 2))
@@ -192,39 +218,14 @@ class GravityPacking(PackingMethod):
             options = np.where(x == x.min())[0]
             choice = np.random.randint(len(options))
             cen = np.vstack([x[options[choice]] + x_min, y[options[choice]]])
-            sites = self._insert_disks_at_points(sites, coords=cen, r=2 * r)
+            sites = _insert_disks_at_points(sites, coords=cen, r=2 * r)
             self.xi = np.append(self.xi, cen.T / 100, axis=0)
             x_min += x.min()
 
         self.n = self.xi.shape[0]
         self.ri = np.asarray([r / 100 for _ in range(self.n)])
 
-    def _insert_disks_at_points(self, im, coords, r):
-        """
-        Insert disk of specified radius into an ND-image at given locations.
-        """
-        xlim, ylim = im.shape
-        s = self._make_disk(r)
-        pt = coords.squeeze()
-        for a, x in enumerate(range(pt[0] - r, pt[0] + r + 1)):
-            if (x >= 0) and (x < xlim):
-                for b, y in enumerate(range(pt[1] - r, pt[1] + r + 1)):
-                    if (y >= 0) and (y < ylim):
-                        if s[a, b] == 1:
-                            im[x, y] = 0
-        return im
 
-    def _make_disk(self, r):
-        """
-        Generate a circular disk of the given radius
-        """
-        s = np.zeros((2 * r + 1, 2 * r + 1), dtype=type(r))
-        thresh = r - 0.001
-        for i in range(2 * r + 1):
-            for j in range(2 * r + 1):
-                if ((i - r) ** 2 + (j - r) ** 2) ** 0.5 <= thresh:
-                    s[i, j] = 1
-        return s
 
 
 if __name__ == "__main__":

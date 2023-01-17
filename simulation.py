@@ -209,7 +209,7 @@ class OffsetRegularPacking(RegularPacking):
         self._post_packing(r)
 
 
-def _insert_disks_at_points(im, coords, r):
+def _insert_disks_at_points(im: np.ndarray, coords: np.ndarray, r: float) -> np.ndarray:
     """
     Insert disk of specified radius into an ND-image at given locations.
     """
@@ -225,7 +225,7 @@ def _insert_disks_at_points(im, coords, r):
     return im
 
 
-def _make_disk(r):
+def _make_disk(r: float) -> np.ndarray:
     """
     Generate a circular disk of the given radius
     """

@@ -25,6 +25,17 @@ class PackingMethod(ABC):
     def generate_packing(self, r: float) -> None:
         ...
 
+    def _post_packing(self, r: float) -> None:
+        """Work out the number of shapes packed and their radius
+
+        Parameters
+        ----------
+        r : float
+            radius of spheres
+        """
+        self.n = self.xi.shape[0]
+        self.ri = np.asarray([r for _ in range(self.n)])
+
     def _add_node_patches(self, ax: plt.Axes, colors: np.ndarray | None = None) -> None:
         """Adds circle patches to an axes at the location of each of the particles.
 
@@ -90,6 +101,13 @@ class PackingMethod(ABC):
         plt.show()
 
     def _get_conductivity_matrix(self) -> np.ndarray:
+        """Generate square matrix with the conductivity of each edge on the diagonal.
+
+        Returns
+        -------
+        np.ndarray
+            The conductivity matrix
+        """
         # TODO: use analytic formula!
         return np.eye(len(self.pairs), len(self.pairs))
 
@@ -150,16 +168,29 @@ class RegularPacking(PackingMethod):
         self._post_packing(r)
 
     def _generate_packing(self, r: float, lim: tuple[float, float] = (0, 1)) -> None:
+        """Generates a regular packing between the limits.
+
+        Parameters
+        ----------
+        r : float
+            Radius of the spheres
+        lim : tuple[float, float], optional
+            Boundaries of domain to pack, by default (0, 1)
+        """
         tmp = r + np.arange(lim[0], lim[1], 2 * r)
         self.xi = np.array(np.meshgrid(tmp, tmp)).T.reshape(-1, 2)
-
-    def _post_packing(self, r: float) -> None:
-        self.n = self.xi.shape[0]
-        self.ri = np.asarray([r for _ in range(self.n)])
 
 
 class OffsetRegularPacking(RegularPacking):
     def generate_packing(self, r: float) -> None:
+        """Same as a regular packing however every odd row is offset by r to the right
+        which makes the packing slightly denser.
+
+        Parameters
+        ----------
+        r : float
+            Radius of spheres
+        """
         # start with the regular packing
         self._generate_packing(r, (-2 * r, 1 + r))
 
@@ -215,6 +246,26 @@ class LowestPointFirst(PackingMethod):
         debug: bool = False,
         random_state: np.random.Generator = None,
     ) -> None:
+        """Similar to RSA however adds sphere in a random choice of the lowest possible
+        options
+
+        Parameters
+        ----------
+        r : float
+            Radius of the sphere
+        n_points : int, optional
+            The number of points in each dimension to discretise the domain into,
+            by default 1000.
+            Increasing this will increase the run time but improve accuracy of
+            packing.
+        max_iter : int, optional
+            The maximum number of iterations, by default 1000
+        debug : bool, optional
+            Displays the feasible addition space, by default False
+        random_state : np.random.Generator, optional
+            Random state to use when making the random choice out of the lowest points,
+            by default None
+        """
         if random_state is None:
             random_state = np.random.default_rng()
         self.xi = np.ndarray((0, 2))
@@ -244,8 +295,7 @@ class LowestPointFirst(PackingMethod):
             self.xi = np.append(self.xi, cen.T / n_points, axis=0)
             i_min += i.min()
 
-        self.n = self.xi.shape[0]
-        self.ri = np.asarray([r / n_points for _ in range(self.n)])
+        self._post_packing(r / n_points)
 
 
 if __name__ == "__main__":

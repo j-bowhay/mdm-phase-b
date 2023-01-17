@@ -194,6 +194,7 @@ def _insert_disks_at_points(im, coords, r):
                         im[x, y] = 0
     return im
 
+
 def _make_disk(r):
     """
     Generate a circular disk of the given radius
@@ -205,27 +206,26 @@ def _make_disk(r):
                 s[i, j] = 1
     return s
 
+
 class GravityPacking(PackingMethod):
     def generate_packing(self, r: float) -> None:
         self.xi = np.ndarray((0, 2))
-        r = int(r * 100)
-        x_min = r
-        sites = np.ones((100, 100), dtype=bool)
+        r = int(r * 1000)
+        i_min = r
+        sites = np.ones((1000, 1000), dtype=bool)
         for _ in range(1000):
-            x, y = np.where(sites[x_min : x_min + 2 * r, ...])
-            if len(x) == 0:
+            i, j = np.where(sites[i_min : i_min + 2 * r, ...])
+            if len(i) == 0:
                 break
-            options = np.where(x == x.min())[0]
+            options = np.where(i == i.min())[0]
             choice = np.random.randint(len(options))
-            cen = np.vstack([x[options[choice]] + x_min, y[options[choice]]])
+            cen = np.vstack([i[options[choice]] + i_min, j[options[choice]]])
             sites = _insert_disks_at_points(sites, coords=cen, r=2 * r)
-            self.xi = np.append(self.xi, cen.T / 100, axis=0)
-            x_min += x.min()
+            self.xi = np.append(self.xi, cen.T / 1000, axis=0)
+            i_min += i.min()
 
         self.n = self.xi.shape[0]
-        self.ri = np.asarray([r / 100 for _ in range(self.n)])
-
-
+        self.ri = np.asarray([r / 1000 for _ in range(self.n)])
 
 
 if __name__ == "__main__":

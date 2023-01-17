@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import random
 
 import scipy
 import numpy as np
@@ -178,14 +179,90 @@ class OffsetRegularPacking(RegularPacking):
         self._post_packing(r)
 
 
+class GravityPacking(PackingMethod):
+    def generate_packing(self, r: float) -> None:
+        self.xi = np.ndarray((0, 2))
+        r = int(r * 100)
+        r = r - 1
+        x_min = r
+        sites = np.ones((100, 100), dtype=bool)
+        for n in range(1000):
+            x, y = np.where(sites[x_min : x_min + 2 * r, ...])
+            if len(x) == 0:
+                break
+            options = np.where(x == x.min())[0]
+            choice = np.random.randint(len(options))
+            cen = np.vstack([x[options[choice]] + x_min, y[options[choice]]])
+            sites = self._insert_disks_at_points(
+                sites, coords=cen, radii=np.array([2 * r]), v=0, overwrite=True
+            )
+            self.xi = np.append(self.xi, cen.T / 100, axis=0)
+            x_min += x.min()
+
+        self.n = self.xi.shape[0]
+        self.ri = np.asarray([r / 100 for _ in range(self.n)])
+
+    def _insert_disks_at_points(
+        self, im, coords, radii, v, smooth=True, overwrite=False
+    ):
+        """
+        Insert disk of specified radii into an ND-image at given locations.
+        """
+        npts = len(coords[0])
+        xlim, ylim = im.shape
+        for i in range(npts):
+            r = radii[i]
+            s = self._make_disk(r, smooth)
+            pt = coords[:, i]
+            for a, x in enumerate(range(pt[0] - r, pt[0] + r + 1)):
+                if (x >= 0) and (x < xlim):
+                    for b, y in enumerate(range(pt[1] - r, pt[1] + r + 1)):
+                        if (y >= 0) and (y < ylim):
+                            if s[a, b] == 1:
+                                if overwrite or (im[x, y] == 0):
+                                    im[x, y] = v
+        return im
+
+    def _make_disk(self, r, smooth=True):
+        r"""
+        Generate a circular structuring element of the given radius
+
+        Parameters
+        ----------
+        r : int
+            The radius of the desired disk
+        smooth : boolean
+            If ``True`` (default) then the disk will not have the litte
+            nibs on the surfaces.
+
+        Returns
+        -------
+        disk : ndarray
+            A numpy array of 1 and 0 suitable for use as a structuring element
+        """
+        s = np.zeros((2 * r + 1, 2 * r + 1), dtype=type(r))
+        if smooth:
+            thresh = r - 0.001
+        else:
+            thresh = r
+        for i in range(2 * r + 1):
+            for j in range(2 * r + 1):
+                if ((i - r) ** 2 + (j - r) ** 2) ** 0.5 <= thresh:
+                    s[i, j] = 1
+        return s
+
+
 if __name__ == "__main__":
-    # p = RegularPacking()
+    # # p = RegularPacking()
+    # # p.generate_packing(0.1)
+    # # p.plot_packing()
+    # p = OffsetRegularPacking()
     # p.generate_packing(0.1)
     # p.plot_packing()
-    p = OffsetRegularPacking()
+    # p.generate_network()
+    # p.plot_network()
+    # # p.solve_network()
+    # # p.plot_solution()
+    p = GravityPacking()
     p.generate_packing(0.1)
     p.plot_packing()
-    p.generate_network()
-    p.plot_network()
-    # p.solve_network()
-    # p.plot_solution()

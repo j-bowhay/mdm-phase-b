@@ -74,7 +74,7 @@ class PackingMethod(ABC):
         self.sink_nodes = np.argwhere(np.abs(self.xi[:, 1]) <= self.ri).squeeze()
 
         tree = scipy.spatial.KDTree(self.xi)
-        self.pairs = tree.query_pairs(r=2 * self.ri[0], eps=1e-3)
+        self.pairs = tree.query_pairs(r=2 * self.ri[0], eps=1e-2)
 
     def _check_network_created(self) -> None:
         if self.pairs is None:
@@ -312,3 +312,5 @@ if __name__ == "__main__":
     p = LowestPointFirst()
     p.generate_packing(0.1)
     p.plot_packing()
+    p.generate_network()
+    p.plot_network()

@@ -207,25 +207,37 @@ def _make_disk(r):
     return s
 
 
-class GravityPacking(PackingMethod):
-    def generate_packing(self, r: float) -> None:
+class LowestPointFirst(PackingMethod):
+    def generate_packing(self, r: float, n_points: int = 1000, max_iter: int = 1000, debug: bool = False) -> None:
         self.xi = np.ndarray((0, 2))
-        r = int(r * 1000)
-        i_min = r
-        sites = np.ones((1000, 1000), dtype=bool)
-        for _ in range(1000):
-            i, j = np.where(sites[i_min : i_min + 2 * r, ...])
+        # scale the radius to the size of discretisation
+        r = int(r * n_points)
+        # lowest possible location of a sphere
+        i_min = 0
+        # initially all locations are viable for adding a sphere
+        possible_locs = np.ones((n_points, n_points), dtype=bool)
+        for _ in range(max_iter):
+            if debug:
+                # display the possible locations
+                plt.imshow(possible_locs)
+                plt.show()
+            # indexes of all the possible place we could insert a sphere
+            i, j = np.where(possible_locs[i_min : i_min + 2 * r, :])
+            # if there is nowhere then we are done
             if len(i) == 0:
                 break
+            # Only want to consider those lowest locations
             options = np.where(i == i.min())[0]
-            choice = np.random.randint(len(options))
-            cen = np.vstack([i[options[choice]] + i_min, j[options[choice]]])
-            sites = _insert_disks_at_points(sites, coords=cen, r=2 * r)
-            self.xi = np.append(self.xi, cen.T / 1000, axis=0)
+            # Choose one at at random
+            chosen_loc = np.random.randint(len(options))
+            cen = np.vstack([i[options[chosen_loc]] + i_min, j[options[chosen_loc]]])
+            # mask off area resulting from our choice
+            possible_locs = _insert_disks_at_points(possible_locs, coords=cen, r=2 * r)
+            self.xi = np.append(self.xi, cen.T / n_points, axis=0)
             i_min += i.min()
 
         self.n = self.xi.shape[0]
-        self.ri = np.asarray([r / 1000 for _ in range(self.n)])
+        self.ri = np.asarray([r / n_points for _ in range(self.n)])
 
 
 if __name__ == "__main__":
@@ -239,6 +251,6 @@ if __name__ == "__main__":
     # p.plot_network()
     # # p.solve_network()
     # # p.plot_solution()
-    p = GravityPacking()
+    p = LowestPointFirst()
     p.generate_packing(0.1)
     p.plot_packing()

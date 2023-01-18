@@ -219,9 +219,8 @@ def _insert_disks_at_points(im: np.ndarray, coords: np.ndarray, r: float) -> np.
     for a, x in enumerate(range(pt[0] - r, pt[0] + r + 1)):
         if (x >= 0) and (x < xlim):
             for b, y in enumerate(range(pt[1] - r, pt[1] + r + 1)):
-                if (y >= 0) and (y < ylim):
-                    if s[a, b] == 1:
-                        im[x, y] = 0
+                if (y >= 0) and (y < ylim) and s[a, b] == 1:
+                    im[x, y] = 0
     return im
 
 
@@ -298,6 +297,72 @@ class LowestPointFirst(PackingMethod):
         self._post_packing(r / n_points)
 
 
+class ClosestFirstPacking(PackingMethod):
+    def generate_packing(
+        self,
+        r: float,
+        n_points: int = 1000,
+        max_iter: int = 1000,
+        debug: bool = False,
+        random_state: np.random.Generator = None,
+    ) -> None:
+        """Similar to RSA however adds sphere in a random choice so that it is
+        touching another sphere.
+
+        Parameters
+        ----------
+        r : float
+            Radius of the sphere
+        n_points : int, optional
+            The number of points in each dimension to discretise the domain into,
+            by default 1000.
+            Increasing this will increase the run time but improve accuracy of
+            packing.
+        max_iter : int, optional
+            The maximum number of iterations, by default 1000
+        debug : bool, optional
+            Displays the feasible addition space, by default False
+        random_state : np.random.Generator, optional
+            Random state to use when making the random choice out of the lowest points,
+            by default None
+        """
+        if random_state is None:
+            random_state = np.random.default_rng()
+        self.xi = np.ndarray((0, 2))
+        # scale the radius to the size of discretisation
+        r = int(r * n_points)
+        # initially all locations are viable for adding a sphere
+        possible_locs = np.ones((n_points, n_points), dtype=bool)
+
+        # need to insert the first sphere here so the distance transform works
+        cen = random_state.choice(np.where(possible_locs), axis=1)
+        # mask off area resulting from our choice
+        possible_locs = _insert_disks_at_points(possible_locs, coords=cen, r=2 * r)
+        self.xi = np.append(self.xi, np.atleast_2d(cen) / n_points, axis=0)
+
+        for _ in range(max_iter):
+            if debug:
+                # display the possible locations
+                plt.imshow(possible_locs)
+                plt.show()
+            # calculate distance from infeasible locations
+            dist = scipy.ndimage.distance_transform_edt(possible_locs)
+
+            # if everywhere is infeasible then we are done
+            if not (dist != 0).any():
+                break
+            # get all the locations that are a minimum distance from infeasible region
+            min_dist = dist[dist != 0].min()
+            locs = np.asarray(np.where(dist == min_dist))
+            # choose the next centre at random
+            cen = random_state.choice(locs, axis=1)
+            # mask off area resulting from our choice
+            possible_locs = _insert_disks_at_points(possible_locs, coords=cen, r=2 * r)
+            self.xi = np.append(self.xi, np.atleast_2d(cen) / n_points, axis=0)
+
+        self._post_packing(r / n_points)
+
+
 if __name__ == "__main__":
     # # p = RegularPacking()
     # # p.generate_packing(0.1)
@@ -309,7 +374,7 @@ if __name__ == "__main__":
     # p.plot_network()
     # # p.solve_network()
     # # p.plot_solution()
-    p = LowestPointFirst()
+    p = ClosestFirstPacking()
     p.generate_packing(0.1)
     p.plot_packing()
     p.generate_network()

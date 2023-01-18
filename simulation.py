@@ -236,7 +236,7 @@ def _make_disk(r: float) -> np.ndarray:
     return s
 
 
-class LowestPointFirst(PackingMethod):
+class LowestPointFirstPacking(PackingMethod):
     def generate_packing(
         self,
         r: float,
@@ -374,7 +374,7 @@ if __name__ == "__main__":
     # p.plot_network()
     # # p.solve_network()
     # # p.plot_solution()
-    p = ClosestFirstPacking()
+    p = LowestPointFirstPacking()
     p.generate_packing(0.1)
     p.plot_packing()
     p.generate_network()

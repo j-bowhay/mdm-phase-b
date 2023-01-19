@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 
 import scipy
@@ -20,6 +22,7 @@ class PackingMethod(ABC):
         self.sink_nodes: np.ndarray | None = None
         self.pairs: set | None = None
         self.temps: np.ndarray | None = None
+        self.tree: scipy.spatial.KDTree | None = None
 
     @abstractmethod
     def generate_packing(self, r: float) -> None:
@@ -74,12 +77,13 @@ class PackingMethod(ABC):
         self._check_packing_created()
         self._set_source_sink_nodes()
 
-        tree = scipy.spatial.KDTree(self.xi)
+        if self.tree is None:
+            self.tree = scipy.spatial.KDTree(self.xi)
         self.pairs = set()
         max_r = self.ri.max()
 
         for i, pos in enumerate(self.xi):
-            result = tree.query_ball_point(pos, 2 * max_r)
+            result = self.tree.query_ball_point(pos, 2 * max_r)
             for index in result:
                 if index == i:
                     continue
@@ -176,8 +180,9 @@ class EqualRadiusPacking(PackingMethod):
         self._check_packing_created()
         self._set_source_sink_nodes()
 
-        tree = scipy.spatial.KDTree(self.xi)
-        self.pairs = tree.query_pairs(r=2 * self.ri[0], eps=1e-2)
+        if self.tree is None:
+            self.tree = scipy.spatial.KDTree(self.xi)
+        self.pairs = self.tree.query_pairs(r=2 * self.ri[0], eps=1e-2)
 
 
 class RegularPacking(EqualRadiusPacking):
@@ -414,11 +419,11 @@ class RSAGrowthPacking(PackingMethod):
         random_state.shuffle(self.xi)
         self._post_packing(r)
 
-        tree = scipy.spatial.KDTree(self.xi)
+        self.tree = scipy.spatial.KDTree(self.xi)
 
         for i, pos in enumerate(self.xi):
             max_r = self.ri.max()
-            result = np.asarray(tree.query_ball_point(pos, 3 * max_r))
+            result = np.asarray(self.tree.query_ball_point(pos, 3 * max_r))
             result = result[result != i]
             combined_radi = self.ri[i] + self.ri[result]
             dists = np.linalg.norm(self.xi[i, :] - self.xi[result, :], axis=1)
@@ -426,7 +431,7 @@ class RSAGrowthPacking(PackingMethod):
 
 
 if __name__ == "__main__":
-    p = RegularPacking()
+    p = RSAGrowthPacking()
     p.generate_packing(0.1)
     p.plot_packing()
     p.generate_network()

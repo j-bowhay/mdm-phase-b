@@ -206,7 +206,7 @@ class RegularPacking(EqualRadiusPacking):
         self.xi = np.array(np.meshgrid(tmp, tmp)).T.reshape(-1, 2)
 
 
-class OffsetRegularPacking(EqualRadiusPacking):
+class OffsetRegularPacking(RegularPacking):
     def generate_packing(self, r: float) -> None:
         """Same as a regular packing however every odd row is offset by r to the right
         which makes the packing slightly denser.
@@ -426,8 +426,8 @@ class RSAGrowthPacking(PackingMethod):
 
 
 if __name__ == "__main__":
-    p = RSAGrowthPacking()
-    p.generate_packing(0.05)
+    p = RegularPacking()
+    p.generate_packing(0.1)
     p.plot_packing()
     p.generate_network()
     p.plot_network()

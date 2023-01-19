@@ -397,6 +397,7 @@ class RSAGrowthPacking(PackingMethod):
     def generate_packing(
         self,
         r: float,
+        ncandidates: int = 1000,
         random_state: np.random.Generator = None,
     ) -> None:
         """Starts with RSA then grows spheres out. Doesn't work well with large
@@ -406,24 +407,29 @@ class RSAGrowthPacking(PackingMethod):
         ----------
         r : float
             Initial radius of spheres
+        ncandidates : int
+            The number of candidate points to use per iteration of RSA
         random_state : np.random.Generator, optional
-            _description_, by default None
+            Random state used by RSA, by default None
         """
         if random_state is None:
             random_state = np.random.default_rng()
 
+        # generate initial random points
         engine = scipy.stats.qmc.PoissonDisk(
-            d=2, radius=2 * r, ncandidates=1000, seed=random_state
+            d=2, radius=2 * r, ncandidates=ncandidates, seed=random_state
         )
         self.xi = engine.fill_space()
+        # want to grow the radii in a random order
         random_state.shuffle(self.xi)
         self._post_packing(r)
 
         self.tree = scipy.spatial.KDTree(self.xi)
 
         for i, pos in enumerate(self.xi):
+            # determine how much we can grow the radius by
             max_r = self.ri.max()
-            result = np.asarray(self.tree.query_ball_point(pos, 3 * max_r))
+            result = np.asarray(self.tree.query_ball_point(pos, 4 * max_r))
             result = result[result != i]
             combined_radi = self.ri[i] + self.ri[result]
             dists = np.linalg.norm(self.xi[i, :] - self.xi[result, :], axis=1)

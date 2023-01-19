@@ -65,16 +65,31 @@ class PackingMethod(ABC):
         self._add_node_patches(ax)
         plt.show()
 
-    def generate_network(self) -> None:
-        """Create the network representation of the packing."""
-        self._check_packing_created()
-
+    def _set_source_sink_nodes(self) -> None:
         # find which nodes are sources and which are sinks
         self.source_nodes = np.argwhere(np.abs(self.xi[:, 1] - 1) <= self.ri).squeeze()
         self.sink_nodes = np.argwhere(np.abs(self.xi[:, 1]) <= self.ri).squeeze()
 
+    def generate_network(self) -> None:
+        self._check_packing_created()
+        self._set_source_sink_nodes()
+
         tree = scipy.spatial.KDTree(self.xi)
-        self.pairs = tree.query_pairs(r=2 * self.ri[0], eps=1e-2)
+        self.pairs = set()
+        max_r = self.ri.max()
+
+        for i, pos in enumerate(self.xi):
+            result = tree.query_ball_point(pos, 2 * max_r)
+            for index in result:
+                if index == i:
+                    continue
+                combined_radius = self.ri[i] + self.ri[index]
+                if np.isclose(
+                    np.linalg.norm(self.xi[i, :] - self.xi[index, :]),
+                    combined_radius,
+                    rtol=5e-2,
+                ):
+                    self.pairs.add((i, index))
 
     def _check_network_created(self) -> None:
         if self.pairs is None:
@@ -155,7 +170,17 @@ class PackingMethod(ABC):
         plt.show()
 
 
-class RegularPacking(PackingMethod):
+class EqualRadiusPacking(PackingMethod):
+    def generate_network(self) -> None:
+        """Create the network representation of the packing."""
+        self._check_packing_created()
+        self._set_source_sink_nodes()
+
+        tree = scipy.spatial.KDTree(self.xi)
+        self.pairs = tree.query_pairs(r=2 * self.ri[0], eps=1e-2)
+
+
+class RegularPacking(EqualRadiusPacking):
     def generate_packing(self, r: float) -> None:
         """Generates a regular packed grid of circles
 
@@ -181,7 +206,7 @@ class RegularPacking(PackingMethod):
         self.xi = np.array(np.meshgrid(tmp, tmp)).T.reshape(-1, 2)
 
 
-class OffsetRegularPacking(RegularPacking):
+class OffsetRegularPacking(EqualRadiusPacking):
     def generate_packing(self, r: float) -> None:
         """Same as a regular packing however every odd row is offset by r to the right
         which makes the packing slightly denser.
@@ -236,7 +261,7 @@ def _make_disk(r: float) -> np.ndarray:
     return s
 
 
-class LowestPointFirstPacking(PackingMethod):
+class LowestPointFirstPacking(EqualRadiusPacking):
     def generate_packing(
         self,
         r: float,
@@ -297,7 +322,7 @@ class LowestPointFirstPacking(PackingMethod):
         self._post_packing(r / n_points)
 
 
-class ClosestFirstPacking(PackingMethod):
+class ClosestFirstPacking(EqualRadiusPacking):
     def generate_packing(
         self,
         r: float,
@@ -363,19 +388,46 @@ class ClosestFirstPacking(PackingMethod):
         self._post_packing(r / n_points)
 
 
+class RSAGrowthPacking(PackingMethod):
+    def generate_packing(
+        self,
+        r: float,
+        random_state: np.random.Generator = None,
+    ) -> None:
+        """Starts with RSA then grows spheres out. Doesn't work well with large
+        a large starting radius.
+
+        Parameters
+        ----------
+        r : float
+            Initial radius of spheres
+        random_state : np.random.Generator, optional
+            _description_, by default None
+        """
+        if random_state is None:
+            random_state = np.random.default_rng()
+
+        engine = scipy.stats.qmc.PoissonDisk(
+            d=2, radius=2 * r, ncandidates=1000, seed=random_state
+        )
+        self.xi = engine.fill_space()
+        random_state.shuffle(self.xi)
+        self._post_packing(r)
+
+        tree = scipy.spatial.KDTree(self.xi)
+
+        for i, pos in enumerate(self.xi):
+            max_r = self.ri.max()
+            result = np.asarray(tree.query_ball_point(pos, 3 * max_r))
+            result = result[result != i]
+            combined_radi = self.ri[i] + self.ri[result]
+            dists = np.linalg.norm(self.xi[i, :] - self.xi[result, :], axis=1)
+            self.ri[i] += (dists - combined_radi).min()
+
+
 if __name__ == "__main__":
-    # # p = RegularPacking()
-    # # p.generate_packing(0.1)
-    # # p.plot_packing()
-    # p = OffsetRegularPacking()
-    # p.generate_packing(0.1)
-    # p.plot_packing()
-    # p.generate_network()
-    # p.plot_network()
-    # # p.solve_network()
-    # # p.plot_solution()
-    p = LowestPointFirstPacking()
-    p.generate_packing(0.1)
+    p = RSAGrowthPacking()
+    p.generate_packing(0.05)
     p.plot_packing()
     p.generate_network()
     p.plot_network()

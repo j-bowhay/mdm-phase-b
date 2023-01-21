@@ -100,6 +100,7 @@ class PackingMethod(ABC):
                     rtol=5e-2,
                 ):
                     self.pairs.add((i, index))
+        self.pairs = sorted(list(self.pairs))
 
     def _check_network_created(self) -> None:
         if self.pairs is None:
@@ -148,18 +149,30 @@ class PackingMethod(ABC):
         graph = nx.from_edgelist(self.pairs)
 
         # create the oriented incidence matrix
-        A = nx.incidence_matrix(graph, oriented=True).todense().T
+        A = (
+            nx.incidence_matrix(
+                graph,
+                oriented=True,
+                nodelist=sorted(graph.nodes()),
+                edgelist=self.pairs,
+            )
+            .todense()
+            .T
+        )
         K = self._get_conductivity_matrix()
 
-        LHS = A.T @ K @ A
-        # flux into the material
-        b = np.zeros((self.n, 1))
+        b = np.zeros(self.n)
         b.put(self.source_nodes, total_flux_in / self.source_nodes.size)
-        b = np.delete(b, self.sink_nodes, axis=0)
-        temps = np.linalg.solve(LHS, b)
 
-        # put the temps of the sink nodes back in
-        self.temps = np.insert(temps, self.sink_nodes, 0)
+        # ground nodes
+        A = np.delete(A, self.sink_nodes, axis=1)
+        b = np.delete(b, self.sink_nodes)
+        # TODO use conductivity!!!!!
+        solved_temps = scipy.linalg.solve(A.T @ A, b)
+
+        self.temps = np.ones(self.n)
+        self.temps[self.sink_nodes] = 0
+        self.temps[self.temps != 0] = solved_temps
 
     def _check_solved(self) -> None:
         if self.temps is None:
@@ -170,13 +183,13 @@ class PackingMethod(ABC):
         self._check_solved()
 
         cmap = plt.colormaps["plasma"]
-        colors = cmap(self.temps / np.amax(self.temps))
+        colors = cmap(self.temps / self.temps.max())
 
         fig, ax = plt.subplots()
         self._add_node_patches(ax, colors)
-        fig.colorbar(
-            plt.cm.ScalarMappable(cmap=cmap), ax=ax, label="Relative Temperature"
-        )
+        scale = plt.cm.ScalarMappable(cmap=cmap)
+        scale.set_clim(vmin=self.temps.min(), vmax=self.temps.max())
+        fig.colorbar(scale, ax=ax, label="Relative Temperature")
         plt.show()
 
 
@@ -189,6 +202,7 @@ class EqualRadiusPacking(PackingMethod):
         if self.tree is None:
             self.tree = scipy.spatial.KDTree(self.xi)
         self.pairs = self.tree.query_pairs(r=2 * self.ri[0], eps=1e-2)
+        self.pairs = sorted(list(self.pairs))
 
 
 class RegularPacking(EqualRadiusPacking):
@@ -444,7 +458,9 @@ class RSAGrowthPacking(PackingMethod):
 
 if __name__ == "__main__":
     p = RegularPacking()
-    p.generate_packing(0.5 / 3)
+    p.generate_packing(0.5 / 4)
     p.plot_packing()
     p.generate_network()
     p.plot_network()
+    p.solve_network()
+    p.plot_solution()

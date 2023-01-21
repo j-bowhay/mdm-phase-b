@@ -70,8 +70,14 @@ class PackingMethod(ABC):
 
     def _set_source_sink_nodes(self) -> None:
         # find which nodes are sources and which are sinks
-        self.source_nodes = np.argwhere(np.abs(self.xi[:, 1] - 1) <= self.ri).squeeze()
-        self.sink_nodes = np.argwhere(np.abs(self.xi[:, 1]) <= self.ri).squeeze()
+        min_height = self.xi[:, 1].min()
+        max_height = self.xi[:, 1].max()
+        self.source_nodes = np.argwhere(
+            np.abs(self.xi[:, 1] - max_height) <= self.ri
+        ).squeeze()
+        self.sink_nodes = np.argwhere(
+            np.abs(self.xi[:, 1]) <= min_height + self.ri
+        ).squeeze()
 
     def generate_network(self) -> None:
         self._check_packing_created()
@@ -437,8 +443,8 @@ class RSAGrowthPacking(PackingMethod):
 
 
 if __name__ == "__main__":
-    p = RSAGrowthPacking()
-    p.generate_packing(0.1)
+    p = RegularPacking()
+    p.generate_packing(0.5 / 3)
     p.plot_packing()
     p.generate_network()
     p.plot_network()

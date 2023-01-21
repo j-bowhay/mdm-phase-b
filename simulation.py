@@ -159,6 +159,10 @@ class PackingMethod(ABC):
             .todense()
             .T
         )
+
+        if np.linalg.matrix_rank(A) < self.n - 1:
+            raise ValueError("Invalid packing (not connected)")
+
         K = self._get_conductivity_matrix()
 
         b = np.zeros(self.n)

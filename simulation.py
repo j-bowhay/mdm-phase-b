@@ -97,7 +97,7 @@ class PackingMethod(ABC):
                 if np.isclose(
                     np.linalg.norm(self.xi[i, :] - self.xi[index, :]),
                     combined_radius,
-                    rtol=5e-2,
+                    rtol=1e-2,
                 ):
                     self.pairs.add((i, index))
         self.pairs = sorted(list(self.pairs))
@@ -461,7 +461,7 @@ class RSAGrowthPacking(PackingMethod):
 
 
 if __name__ == "__main__":
-    p = RegularPacking()
+    p = ClosestFirstPacking()
     p.generate_packing(0.5 / 4)
     p.plot_packing()
     p.generate_network()

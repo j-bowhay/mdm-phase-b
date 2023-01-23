@@ -199,7 +199,10 @@ class PackingMethod(ABC):
 
 class EqualRadiusPacking(PackingMethod):
     def generate_network(self) -> None:
-        """Create the network representation of the packing."""
+        """Create the network representation of the packing. Note we override the
+        original method for creating the network here as it can be done more
+        efficiently if all spheres are of equal radius.
+        """
         self._check_packing_created()
         self._set_source_sink_nodes()
 
@@ -461,7 +464,7 @@ class RSAGrowthPacking(PackingMethod):
 
 
 if __name__ == "__main__":
-    p = ClosestFirstPacking()
+    p = LowestPointFirstPacking()
     p.generate_packing(0.5 / 4)
     p.plot_packing()
     p.generate_network()

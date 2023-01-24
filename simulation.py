@@ -68,6 +68,28 @@ class PackingMethod(ABC):
         self._add_node_patches(ax)
         plt.show()
 
+    def calculate_porosity(self, n_points: int = 1000) -> float:
+        """Calculate the porosity of the packing.
+
+        Parameters
+        ----------
+        n_points : int, optional
+            Number of points in each dimension to use in the discretised, by default 1000
+
+        Returns
+        -------
+        float
+            The porosity of the packing
+        """
+        self._check_packing_created()
+
+        domain = np.ones((n_points, n_points))
+        for r, point in zip(
+            (n_points * self.ri).astype(int), (n_points * self.xi).astype(int)
+        ):
+            domain = _insert_disks_at_points(domain, point, r)
+        return (domain == 1).sum() / (n_points**2)
+
     def _set_source_sink_nodes(self) -> None:
         # find which nodes are sources and which are sinks
         min_height = self.xi[:, 1].min()
@@ -471,3 +493,4 @@ if __name__ == "__main__":
     p.plot_network()
     p.solve_network()
     p.plot_solution()
+    print(p.calculate_porosity())

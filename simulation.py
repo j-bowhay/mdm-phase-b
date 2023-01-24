@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-
 import scipy
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from multiprocess import Pool
 
 
-class PackingMethod(ABC):
+class PackingMethod:
     """
     Base class for generating packing in a unit square
     """
@@ -24,9 +23,8 @@ class PackingMethod(ABC):
         self.temps: np.ndarray | None = None
         self.tree: scipy.spatial.KDTree | None = None
 
-    @abstractmethod
     def generate_packing(self, r: float) -> None:
-        ...
+        raise NotImplementedError
 
     def _post_packing(self, r: float) -> None:
         """Work out the number of shapes packed and their radius
@@ -290,7 +288,7 @@ class OffsetRegularPacking(RegularPacking):
 
 def _insert_disks_at_points(im: np.ndarray, coords: np.ndarray, r: float) -> np.ndarray:
     """
-    Insert disk of specified radius into an ND-image at given locations.
+    Insert disk of specified radius into an array at given locations.
     """
     xlim, ylim = im.shape
     s = _make_disk(r)
@@ -485,6 +483,33 @@ class RSAGrowthPacking(PackingMethod):
             self.ri[i] += (dists - combined_radi).min()
 
 
+def get_porosity_distribution(
+    method: PackingMethod, radius: float, number_of_trials: int
+) -> list[float]:
+    """Samples the porosity of a packing method lots of times to get the distribution of porosity.
+
+    Parameters
+    ----------
+    method : PackingMethod
+        The packing class to use
+    number_of_trials : int
+        Number of times to generate a packing and get the porosity
+
+    Returns
+    -------
+    list[float]
+        The sampled porosities
+    """
+
+    def wrapper() -> float:
+        p = method()
+        p.generate_packing(radius)
+        return p.calculate_porosity()
+
+    with Pool() as p:
+        return list(p.starmap(wrapper, [() for _ in range(number_of_trials)]))
+
+
 if __name__ == "__main__":
     p = LowestPointFirstPacking()
     p.generate_packing(0.5 / 4)
@@ -493,4 +518,6 @@ if __name__ == "__main__":
     p.plot_network()
     p.solve_network()
     p.plot_solution()
-    print(p.calculate_porosity())
+    print(f"Packing porosity: {p.calculate_porosity()}")
+    plt.hist(get_porosity_distribution(ClosestFirstPacking, 0.5 / 4, 100))
+    plt.show()

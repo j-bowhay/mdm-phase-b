@@ -331,7 +331,7 @@ class OffsetRegularPacking(RegularPacking):
         self._post_packing(r)
 
 
-def _insert_disks_at_points(im: np.ndarray, coords: np.ndarray, r: float) -> np.ndarray:
+def _insert_disks_at_points(im: np.ndarray, coords: np.ndarray, r: int) -> np.ndarray:
     """
     Insert disk of specified radius into an array at given locations.
     """
@@ -347,7 +347,7 @@ def _insert_disks_at_points(im: np.ndarray, coords: np.ndarray, r: float) -> np.
 
 
 @lru_cache
-def _make_disk(r: float) -> np.ndarray:
+def _make_disk(r: int) -> np.ndarray:
     """
     Generate a circular disk of the given radius
     """
@@ -418,6 +418,19 @@ class LowestPointFirstPacking(EqualRadiusPacking):
             i_min += i.min()
 
         self._post_packing(r / n_points)
+
+
+class LowestFirstFromDistributionPacking(PackingMethod):
+    def generate_packing(
+        self,
+        r_distribution: scipy.stats.rv_continuous,
+        n_points: int = 1000,
+        max_iter: int = 1000,
+        debug: bool = False,
+        random_state: np.random.Generator = None,
+    ) -> None:
+        if random_state is None:
+            random_state = np.random.default_rng()
 
 
 class ClosestFirstPacking(EqualRadiusPacking):

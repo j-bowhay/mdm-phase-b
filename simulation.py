@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import math
+from functools import lru_cache
+
 import scipy
 import numpy as np
 import networkx as nx
@@ -8,12 +11,50 @@ import matplotlib.patches as patches
 from multiprocess import Pool
 
 
+@lru_cache
+def _contact_resistance_expr(epsilon: float, b: float, k: float) -> float:
+    """Calculates contact resistance in a sphere. For derivation see
+    preliminary_investigations/Contact resistance calculations.ipynb
+
+    Parameters
+    ----------
+    epsilon : float
+        Lower limit of integration. Typically very small, control how large an area
+        the spheres are in contact by.
+    b : float
+        How far into the sphere to integrate. Not critical to get this term right as
+        epsilon << 1 will dominate.
+    k : float
+        The thermal conductivity (W/(K·m)) of the material
+
+    Returns
+    -------
+    float
+        The contact resistance in the sphere
+    """
+    return (1 / (4 * math.pi * k)) * math.log((2 * b) / epsilon - 1)
+
+
 class PackingMethod:
     """
     Base class for generating packing in a unit square
     """
 
-    def __init__(self) -> None:
+    def __init__(self, k: float, epsilon: float) -> None:
+        """Initial the packing method.
+
+        Parameters
+        ----------
+        k : float
+            The thermal conductivity (W/(K·m)) of the material
+        epsilon : float
+            Lower limit of integration. Typically very small, control how large an
+            area the spheres are in contact by.
+            See preliminary_investigations/Contact resistance calculations.ipynb for
+            more information
+        """
+        self.k = k
+        self.epsilon = epsilon
         self.n: int | None = None
         self.xi: np.ndarray | None = None
         self.ri: np.ndarray | None = None
@@ -154,8 +195,13 @@ class PackingMethod:
         np.ndarray
             The conductivity matrix
         """
-        # TODO: use analytic formula!
-        return np.eye(len(self.pairs), len(self.pairs))
+        K = np.eye(len(self.pairs), len(self.pairs))
+        for i, (start_node, end_node) in enumerate(self.pairs):
+            K[i, i] = 1 / (
+                _contact_resistance_expr(self.epsilon, self.ri[start_node] / 2, self.k)
+                + _contact_resistance_expr(self.epsilon, self.ri[end_node] / 2, self.k)
+            )
+        return K
 
     def solve_network(self, total_flux_in: float = 1.0) -> None:
         """Solve for the temperature in the network
@@ -191,8 +237,7 @@ class PackingMethod:
         # ground nodes
         A = np.delete(A, self.sink_nodes, axis=1)
         b = np.delete(b, self.sink_nodes)
-        # TODO use conductivity!!!!!
-        solved_temps = scipy.linalg.solve(A.T @ A, b)
+        solved_temps = scipy.linalg.solve(A.T @ K @ A, b)
 
         self.temps = np.ones(self.n)
         self.temps[self.sink_nodes] = 0
@@ -301,6 +346,7 @@ def _insert_disks_at_points(im: np.ndarray, coords: np.ndarray, r: float) -> np.
     return im
 
 
+@lru_cache
 def _make_disk(r: float) -> np.ndarray:
     """
     Generate a circular disk of the given radius
@@ -502,7 +548,8 @@ def get_porosity_distribution(
     """
 
     def wrapper() -> float:
-        p = method()
+        # can use any k and epsilon here it doesn't matter
+        p = method(0, 0)
         p.generate_packing(radius)
         return p.calculate_porosity()
 
@@ -511,7 +558,7 @@ def get_porosity_distribution(
 
 
 if __name__ == "__main__":
-    p = LowestPointFirstPacking()
+    p = RegularPacking(100, 1e-3)
     p.generate_packing(0.5 / 4)
     p.plot_packing()
     p.generate_network()

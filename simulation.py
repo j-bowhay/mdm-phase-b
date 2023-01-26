@@ -429,6 +429,30 @@ class LowestFirstFromDistributionPacking(PackingMethod):
         debug: bool = False,
         random_state: np.random.Generator = None,
     ) -> None:
+        """Similar packing method to lowest first but the radii are sampled from a
+        distribution.
+
+        Parameters
+        ----------
+        r_distribution : scipy.stats.rv_continuous
+            The distribution from which the radii are sampled.
+        n_points : int, optional
+            The number of points in each dimension to discretise the domain into,
+            by default 1000.
+            Increasing this will increase the run time but improve accuracy of
+            packing.
+        max_iter : int, optional
+            The maximum number of iterations, by default 1000
+        debug : bool, optional
+            Displays some plot to help with debugging, by default False
+        random_state : np.random.Generator, optional
+            The random state to use, by default None
+
+        Raises
+        ------
+        ValueError
+            If the sampled radius is negative
+        """
         if random_state is None:
             random_state = np.random.default_rng()
         self.xi = np.ndarray((0, 2))

@@ -434,7 +434,6 @@ class LowestFirstFromDistributionPacking(PackingMethod):
         self.xi = np.ndarray((0, 2))
         self.ri = np.ndarray((0))
         # lowest possible location of a sphere
-        i_min = 0
         for i in range(max_iter):
             # sample the radius from the distribution
             r = r_distribution.rvs(1)
@@ -451,9 +450,8 @@ class LowestFirstFromDistributionPacking(PackingMethod):
                 )
             if debug:
                 plt.imshow(possible_locs)
-                plt.show()
             # indexes of all the possible place we could insert a sphere
-            i, j = np.where(possible_locs[: i_min + 2 * r_scaled, :])
+            i, j = np.where(possible_locs)
             # if there is nowhere then we are done
             if len(i) == 0:
                 break
@@ -461,10 +459,13 @@ class LowestFirstFromDistributionPacking(PackingMethod):
             options = np.where(i == i.min())[0]
             # Choose one at at random
             choice = random_state.choice(options)
-            cen = np.vstack([i[choice] + i_min, j[choice]])
+            cen = np.vstack([i[choice], j[choice]])
+            if debug:
+                plt.plot(cen[1], cen[0], "r*", markersize=20)
+                plt.show()
             self.xi = np.append(self.xi, cen.T / n_points, axis=0)
             self.ri = np.append(self.ri, r, axis=0)
-            i_min += i.min()
+        self.xi = np.flip(self.xi, axis=1)
         self.n = self.ri.size
 
 
@@ -607,7 +608,7 @@ def get_porosity_distribution(
 
 if __name__ == "__main__":
     p = LowestFirstFromDistributionPacking(100, 1e-3)
-    p.generate_packing(scipy.stats.gamma(10, scale=0.05/4), debug=True)
+    p.generate_packing(scipy.stats.gamma(10, scale=0.05 / 4), n_points=1000)
     p.plot_packing()
     p.generate_network()
     p.plot_network()

@@ -431,6 +431,41 @@ class LowestFirstFromDistributionPacking(PackingMethod):
     ) -> None:
         if random_state is None:
             random_state = np.random.default_rng()
+        self.xi = np.ndarray((0, 2))
+        self.ri = np.ndarray((0))
+        # lowest possible location of a sphere
+        i_min = 0
+        for i in range(max_iter):
+            # sample the radius from the distribution
+            r = r_distribution.rvs(1)
+            if r < 0:
+                raise ValueError("Radius cannot be negative")
+            r_scaled = int(r * n_points)
+            # generate feasible region
+            possible_locs = np.ones((n_points, n_points), dtype=bool)
+            for r_circ, cen in zip(
+                (n_points * self.ri).astype(int), (n_points * self.xi).astype(int)
+            ):
+                possible_locs = _insert_disks_at_points(
+                    possible_locs, cen, r_scaled + r_circ
+                )
+            if debug:
+                plt.imshow(possible_locs)
+                plt.show()
+            # indexes of all the possible place we could insert a sphere
+            i, j = np.where(possible_locs[: i_min + 2 * r_scaled, :])
+            # if there is nowhere then we are done
+            if len(i) == 0:
+                break
+            # Only want to consider those lowest locations
+            options = np.where(i == i.min())[0]
+            # Choose one at at random
+            choice = random_state.choice(options)
+            cen = np.vstack([i[choice] + i_min, j[choice]])
+            self.xi = np.append(self.xi, cen.T / n_points, axis=0)
+            self.ri = np.append(self.ri, r, axis=0)
+            i_min += i.min()
+        self.n = self.ri.size
 
 
 class ClosestFirstPacking(EqualRadiusPacking):
@@ -571,8 +606,8 @@ def get_porosity_distribution(
 
 
 if __name__ == "__main__":
-    p = RegularPacking(100, 1e-3)
-    p.generate_packing(0.5 / 4)
+    p = LowestFirstFromDistributionPacking(100, 1e-3)
+    p.generate_packing(scipy.stats.gamma(10, scale=0.05/4), debug=True)
     p.plot_packing()
     p.generate_network()
     p.plot_network()

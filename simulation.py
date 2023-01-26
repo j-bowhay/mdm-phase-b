@@ -203,6 +203,28 @@ class PackingMethod:
             )
         return K
 
+    def _get_incidence_matrix(self) -> np.ndarray:
+        """Generates the oriented incidence matrix for the network
+
+        Returns
+        -------
+        np.ndarray
+            Oriented incidence matrix
+        """
+        graph = nx.from_edgelist(self.pairs)
+        return (
+            nx.incidence_matrix(
+                graph,
+                oriented=True,
+                nodelist=sorted(
+                    graph.nodes()
+                ),  # needs sorting otherwise nx does something weird
+                edgelist=self.pairs,
+            )
+            .todense()
+            .T
+        )
+
     def solve_network(self, total_flux_in: float = 1.0) -> None:
         """Solve for the temperature in the network
 
@@ -212,19 +234,9 @@ class PackingMethod:
             The total amount of flux going into the material
         """
         self._check_network_created()
-        graph = nx.from_edgelist(self.pairs)
 
         # create the oriented incidence matrix
-        A = (
-            nx.incidence_matrix(
-                graph,
-                oriented=True,
-                nodelist=sorted(graph.nodes()),
-                edgelist=self.pairs,
-            )
-            .todense()
-            .T
-        )
+        A = self._get_incidence_matrix()
 
         if np.linalg.matrix_rank(A) < self.n - 1:
             raise ValueError("Invalid packing (not connected)")
@@ -260,6 +272,33 @@ class PackingMethod:
         scale.set_clim(vmin=self.temps.min(), vmax=self.temps.max())
         fig.colorbar(scale, ax=ax, label="Relative Temperature")
         plt.show()
+
+    def total_effective_resistance(self) -> float:
+        """Calculates the total effective resistance of the network. This is the
+        sum the sum of the effective resistance /between all distinct pairs of nodes.
+        This is is related to the average power dissipation of the circuit with
+        a random current excitation.
+
+        References:
+        https://web.stanford.edu/~boyd/papers/pdf/eff_res.pdf
+        https://www.universiteitleiden.nl/binaries/content/assets/science/mi/scripties/ellensmaster.pdf
+        https://cs-people.bu.edu/orecchia/CS591fa16/lecture7.pdf
+
+        Returns
+        -------
+        float
+            The total effective resistance.
+        """
+        self._check_network_created()
+
+        K = self._get_conductivity_matrix()
+        A = self._get_incidence_matrix()
+        # Calculated the weighted graph laplacian
+        L = A.T @ K @ A
+
+        w = scipy.linalg.eig(L)[0]
+        # Equation 15 from Ghosh, Boyd and Saberi
+        return w.size * (1 / w).sum()
 
 
 class EqualRadiusPacking(PackingMethod):
@@ -417,6 +456,7 @@ class LowestPointFirstPacking(EqualRadiusPacking):
             self.xi = np.append(self.xi, cen.T / n_points, axis=0)
             i_min += i.min()
 
+        # switch here due to matrix vs cartesian coords
         self.xi = np.flip(self.xi, axis=1)
         self._post_packing(r / n_points)
 
@@ -490,6 +530,8 @@ class LowestFirstFromDistributionPacking(PackingMethod):
                 plt.show()
             self.xi = np.append(self.xi, cen.T / n_points, axis=0)
             self.ri = np.append(self.ri, r, axis=0)
+
+        # switch here due to matrix vs cartesian coords
         self.xi = np.flip(self.xi, axis=1)
         self.n = self.ri.size
 
@@ -632,13 +674,16 @@ def get_porosity_distribution(
 
 
 if __name__ == "__main__":
-    p = LowestFirstFromDistributionPacking(100, 1e-3)
-    p.generate_packing(scipy.stats.gamma(10, scale=0.05 / 4), n_points=1000)
+    # p = LowestFirstFromDistributionPacking(100, 1e-3)
+    # p.generate_packing(scipy.stats.gamma(10, scale=0.05 / 4), n_points=1000)
+    p = RegularPacking(100, 1e-3)
+    p.generate_packing(0.5/10)
     p.plot_packing()
     p.generate_network()
-    p.plot_network()
-    p.solve_network()
-    p.plot_solution()
-    print(f"Packing porosity: {p.calculate_porosity()}")
-    plt.hist(get_porosity_distribution(ClosestFirstPacking, 0.5 / 4, 100))
-    plt.show()
+    print(p.total_effective_resistance())
+    # p.plot_network()
+    # p.solve_network()
+    # p.plot_solution()
+    # print(f"Packing porosity: {p.calculate_porosity()}")
+    # plt.hist(get_porosity_distribution(ClosestFirstPacking, 0.5 / 4, 100))
+    # plt.show()

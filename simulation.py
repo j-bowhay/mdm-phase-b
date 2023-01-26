@@ -300,6 +300,12 @@ class PackingMethod:
         # Equation 15 from Ghosh, Boyd and Saberi
         return w.size * (1 / w).sum()
 
+    def calculate_effective_resistance(self) -> float:
+        # good chance this can be improved by using ghost nodes
+        self.solve_network()
+        delta_t = np.mean(self.temps[self.source_nodes])
+        return delta_t
+
 
 class EqualRadiusPacking(PackingMethod):
     def generate_network(self) -> None:
@@ -676,11 +682,11 @@ def get_porosity_distribution(
 if __name__ == "__main__":
     # p = LowestFirstFromDistributionPacking(100, 1e-3)
     # p.generate_packing(scipy.stats.gamma(10, scale=0.05 / 4), n_points=1000)
-    p = RegularPacking(100, 1e-3)
+    p = LowestPointFirstPacking(100, 1e-3)
     p.generate_packing(0.5/10)
     p.plot_packing()
     p.generate_network()
-    print(p.total_effective_resistance())
+    print(p.calculate_effective_resistance())
     # p.plot_network()
     # p.solve_network()
     # p.plot_solution()

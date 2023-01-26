@@ -417,6 +417,7 @@ class LowestPointFirstPacking(EqualRadiusPacking):
             self.xi = np.append(self.xi, cen.T / n_points, axis=0)
             i_min += i.min()
 
+        self.xi = np.flip(self.xi, axis=1)
         self._post_packing(r / n_points)
 
 

@@ -38,12 +38,17 @@ def _nondeterministic_wrapper(
         p = method(k, epsilon)
         p.generate_packing(radius, n_points=5000, max_iter=10000)
         p.generate_network()
-        return p.calculate_effective_resistance(), p.calculate_porosity(n_points=5000)
+        try:
+            return p.calculate_effective_resistance(), p.calculate_porosity(
+                n_points=5000
+            )
+        except ValueError:
+            return np.nan, np.nan
 
     with Pool() as p:
         result = p.starmap(wrapper, [() for _ in range(repeats)])
     result = np.asarray(result)
-    return PackingResult(np.mean(result[:, 1]), np.mean(result[:, 0]))
+    return PackingResult(np.nanmean(result[:, 1]), np.nanmean(result[:, 0]))
 
 
 def mc_porosity_resistance(

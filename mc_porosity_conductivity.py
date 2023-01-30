@@ -82,6 +82,7 @@ def mc_porosity_resistance(
     }
 
     for i in range(samples):
+        print(i)
         radius = rng.uniform(*radii_range)
         data["radius"].append(radius)
 
@@ -130,7 +131,7 @@ if __name__ == "__main__":
         0x8C3C010CB4754C905776BDAC5EE7501,
         (0.04, 0.2),
         samples=20,
-        non_deterministic_repeats=100,
+        non_deterministic_repeats=1,
         k=100,
         epsilon=1e-3,
     )

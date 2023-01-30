@@ -127,6 +127,11 @@ class PackingMethod:
             (n_points * self.ri).astype(int), (n_points * self.xi).astype(int)
         ):
             domain = _insert_disks_at_points(domain, point, r)
+        # trip down any rows / columns that are all one
+        domain = domain[~np.all(domain == 1, axis=1)].T
+        domain = domain[~np.all(domain == 1, axis=1)].T
+        plt.imshow(domain)
+        plt.show()
         return (domain == 1).sum() / (n_points**2)
 
     def _set_source_sink_nodes(self) -> None:
@@ -344,7 +349,7 @@ class RegularPacking(EqualRadiusPacking):
         lim : tuple[float, float], optional
             Boundaries of domain to pack, by default (0, 1)
         """
-        tmp = r + np.arange(lim[0], lim[1], 2 * r)
+        tmp = np.arange(lim[0], lim[1], 2 * r)
         self.xi = np.array(np.meshgrid(tmp, tmp)).T.reshape(-1, 2)
 
 
@@ -359,10 +364,10 @@ class OffsetRegularPacking(RegularPacking):
             Radius of spheres
         """
         # start with the regular packing
-        self._generate_packing(r, (-2 * r, 1 + r))
+        self._generate_packing(r, (-2 * r, 1 + 3 * r))
 
         # shift odd rows
-        for i in range(-1, self.xi.shape[0], 4):
+        for i in range(2, self.xi.shape[0], 4):
             self.xi[np.isclose(self.xi[:, 1], r * i), 0] += r
 
         # squash everything down
@@ -682,9 +687,10 @@ def get_porosity_distribution(
 if __name__ == "__main__":
     # p = LowestFirstFromDistributionPacking(100, 1e-3)
     # p.generate_packing(scipy.stats.gamma(10, scale=0.05 / 4), n_points=1000)
-    p = LowestPointFirstPacking(100, 1e-3)
-    p.generate_packing(0.5/4)
+    p = OffsetRegularPacking(100, 1e-3)
+    p.generate_packing(0.0605370)
     p.plot_packing()
+    print(f"Packing porosity: {p.calculate_porosity()}")
     p.generate_network()
     print(p.calculate_effective_resistance())
     p.plot_network()

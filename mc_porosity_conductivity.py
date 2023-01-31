@@ -81,8 +81,7 @@ def mc_porosity_resistance(
         "variable_epsilon_closest_first_resistance": [],
     }
 
-    for i in range(samples):
-        print(i)
+    for i in np.linspace(*radii_range, samples):
         radius = rng.uniform(*radii_range)
         data["radius"].append(radius)
 

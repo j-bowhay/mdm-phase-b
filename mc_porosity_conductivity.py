@@ -18,6 +18,7 @@ from simulation import (
 class PackingResult:
     porosity: float
     resistance: float
+    resistance_sd = None
 
 
 def _deterministic_wrapper(
@@ -36,11 +37,11 @@ def _nondeterministic_wrapper(
 ) -> PackingResult:
     def wrapper():
         p = method(k, epsilon)
-        p.generate_packing(radius, n_points=5000, max_iter=10000)
+        p.generate_packing(radius, n_points=6000, max_iter=10000)
         p.generate_network()
         try:
             return p.calculate_effective_resistance(), p.calculate_porosity(
-                n_points=5000
+                n_points=2000
             )
         except ValueError:
             return np.nan, np.nan
@@ -48,7 +49,7 @@ def _nondeterministic_wrapper(
     with Pool() as p:
         result = p.starmap(wrapper, [() for _ in range(repeats)])
     result = np.asarray(result)
-    return PackingResult(np.nanmean(result[:, 1]), np.nanmean(result[:, 0]))
+    return PackingResult(np.nanmean(result[:, 1]), np.nanmean(result[:, 0]), np.std(result[:, 0]))
 
 
 def mc_porosity_resistance(
@@ -77,31 +78,33 @@ def mc_porosity_resistance(
         "variable_epsilon_offset_resistance": [],
         "variable_epsilon_lowest_first_porosity": [],
         "variable_epsilon_lowest_first_resistance": [],
+        "variable_epsilon_lowest_first_resistance_sd": [],
         "variable_epsilon_closest_first_porosity": [],
         "variable_epsilon_closest_first_resistance": [],
+        "variable_epsilon_closest_first_resistance_sd": [],
     }
 
-    for i in np.linspace(*radii_range, samples):
-        radius = rng.uniform(*radii_range)
+    for i, radius in enumerate(np.linspace(*radii_range, num=samples)):
+        print(i)
         data["radius"].append(radius)
 
         # fixed epsilon
-        reg = _deterministic_wrapper(RegularPacking, k, epsilon, radius)
-        data["fixed_epsilon_regular_resistance"].append(reg.resistance)
-        data["fixed_epsilon_regular_porosity"].append(reg.porosity)
-        off = _deterministic_wrapper(OffsetRegularPacking, k, epsilon, radius)
-        data["fixed_epsilon_offset_resistance"].append(off.resistance)
-        data["fixed_epsilon_offset_porosity"].append(off.porosity)
-        low = _nondeterministic_wrapper(
-            LowestPointFirstPacking, k, epsilon, radius, non_deterministic_repeats
-        )
-        data["fixed_epsilon_lowest_first_resistance"].append(low.resistance)
-        data["fixed_epsilon_lowest_first_porosity"].append(low.porosity)
-        close = _nondeterministic_wrapper(
-            ClosestFirstPacking, k, epsilon, radius, non_deterministic_repeats
-        )
-        data["fixed_epsilon_closest_first_resistance"].append(close.resistance)
-        data["fixed_epsilon_closest_first_porosity"].append(close.porosity)
+        # reg = _deterministic_wrapper(RegularPacking, k, epsilon, radius)
+        # data["fixed_epsilon_regular_resistance"].append(reg.resistance)
+        # data["fixed_epsilon_regular_porosity"].append(reg.porosity)
+        # off = _deterministic_wrapper(OffsetRegularPacking, k, epsilon, radius)
+        # data["fixed_epsilon_offset_resistance"].append(off.resistance)
+        # data["fixed_epsilon_offset_porosity"].append(off.porosity)
+        # low = _nondeterministic_wrapper(
+        #     LowestPointFirstPacking, k, epsilon, radius, non_deterministic_repeats
+        # )
+        # data["fixed_epsilon_lowest_first_resistance"].append(low.resistance)
+        # data["fixed_epsilon_lowest_first_porosity"].append(low.porosity)
+        # close = _nondeterministic_wrapper(
+        #     ClosestFirstPacking, k, epsilon, radius, non_deterministic_repeats
+        # )
+        # data["fixed_epsilon_closest_first_resistance"].append(close.resistance)
+        # data["fixed_epsilon_closest_first_porosity"].append(close.porosity)
 
         # variable epsilon
         reg = _deterministic_wrapper(RegularPacking, k, radius / 100, radius)
@@ -115,11 +118,13 @@ def mc_porosity_resistance(
         )
         data["variable_epsilon_lowest_first_resistance"].append(low.resistance)
         data["variable_epsilon_lowest_first_porosity"].append(low.porosity)
+        data["variable_epsilon_lowest_first_resistance_sd"].append(low.resistance_sd)
         close = _nondeterministic_wrapper(
             ClosestFirstPacking, k, radius / 100, radius, non_deterministic_repeats
         )
         data["variable_epsilon_closest_first_resistance"].append(close.resistance)
         data["variable_epsilon_closest_first_porosity"].append(close.porosity)
+        data["variable_epsilon_closest_first_resistance_sd"].append(close.resistance_sd)
 
         df = pd.DataFrame(data=data)
         df.to_csv(f"data_{i}.csv")
@@ -129,8 +134,8 @@ if __name__ == "__main__":
     mc_porosity_resistance(
         0x8C3C010CB4754C905776BDAC5EE7501,
         (0.04, 0.2),
-        samples=20,
-        non_deterministic_repeats=1,
+        samples=100,
+        non_deterministic_repeats=30,
         k=100,
         epsilon=1e-3,
     )

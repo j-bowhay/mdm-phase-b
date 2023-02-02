@@ -132,7 +132,7 @@ class PackingMethod:
         domain = domain[~np.all(domain == 1, axis=1)].T
         plt.imshow(domain)
         plt.show()
-        return (domain == 1).sum() / (n_points**2)
+        return (domain == 1).sum() / np.prod(domain.shape)
 
     def _set_source_sink_nodes(self) -> None:
         # find which nodes are sources and which are sinks

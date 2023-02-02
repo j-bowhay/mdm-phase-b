@@ -49,7 +49,7 @@ def _nondeterministic_wrapper(
     with Pool() as p:
         result = p.starmap(wrapper, [() for _ in range(repeats)])
     result = np.asarray(result)
-    return PackingResult(np.nanmean(result[:, 1]), np.nanmean(result[:, 0]), np.std(result[:, 0]))
+    return PackingResult(np.nanmean(result[:, 1]), np.nanmean(result[:, 0]), restistanceeE_sd=np.std(result[:, 0]))
 
 
 def mc_porosity_resistance(

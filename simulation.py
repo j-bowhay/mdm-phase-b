@@ -130,8 +130,6 @@ class PackingMethod:
         # trip down any rows / columns that are all one
         domain = domain[~np.all(domain == 1, axis=1)].T
         domain = domain[~np.all(domain == 1, axis=1)].T
-        plt.imshow(domain)
-        plt.show()
         return (domain == 1).sum() / np.prod(domain.shape)
 
     def _set_source_sink_nodes(self) -> None:

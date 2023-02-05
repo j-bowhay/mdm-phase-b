@@ -2,13 +2,13 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="86.360916mm"
-   height="70.18145mm"
-   viewBox="0 0 86.360916 70.18145"
+   width="86.361mm"
+   height="70.181mm"
+   viewBox="0 0 86.361 70.181"
    version="1.1"
    id="svg5"
    sodipodi:docname="curved_potential.svg"
-   inkscape:version="1.2.1 (9c6d41e410, 2022-07-14, custom)"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -25,9 +25,9 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="2.6920101"
-     inkscape:cx="199.29346"
-     inkscape:cy="133.9148"
-     inkscape:window-width="1920"
+     inkscape:cx="190.00672"
+     inkscape:cy="134.65774"
+     inkscape:window-width="2560"
      inkscape:window-height="1026"
      inkscape:window-x="0"
      inkscape:window-y="26"
@@ -326,7 +326,7 @@
       </g>
     </g>
     <path
-       style="fill:none;stroke:#000000;stroke-width:0.26458333;stroke-dasharray:0.52916664,0.26458332;stroke-dashoffset:0"
+       style="fill:none;stroke:#000000;stroke-width:0.264583;stroke-dasharray:0.529167, 0.264583;stroke-dashoffset:0"
        id="path466"
        sodipodi:type="arc"
        sodipodi:cx="32.402229"
@@ -339,7 +339,7 @@
        d="m 32.66646,36.879704 a 5.1041207,4.9847531 0 0 1 4.838083,4.845427 5.1041207,4.9847531 0 0 1 -4.567282,5.089933"
        sodipodi:open="true" />
     <path
-       style="fill:none;stroke:#000000;stroke-width:0.26458333;stroke-dasharray:0.52916664,0.26458332;stroke-dashoffset:0"
+       style="fill:none;stroke:#000000;stroke-width:0.264583;stroke-dasharray:0.529167, 0.264583;stroke-dashoffset:0"
        id="path466-3"
        sodipodi:type="arc"
        sodipodi:cx="33.244884"
@@ -352,7 +352,7 @@
        d="m 33.775527,31.195318 a 10.250384,10.010663 0 0 1 9.716112,9.730862 10.250384,10.010663 0 0 1 -9.172274,10.221891"
        sodipodi:open="true" />
     <path
-       style="fill:none;stroke:#000000;stroke-width:0.26458333;stroke-dasharray:0.52916664,0.26458332;stroke-dashoffset:0"
+       style="fill:none;stroke:#000000;stroke-width:0.264583;stroke-dasharray:0.529167, 0.264583;stroke-dashoffset:0"
        id="path466-3-6"
        sodipodi:type="arc"
        sodipodi:cx="36.298866"

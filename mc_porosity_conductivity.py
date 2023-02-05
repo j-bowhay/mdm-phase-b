@@ -17,8 +17,8 @@ from simulation import (
 @dataclass
 class PackingResult:
     porosity: float
-    resistance: float
-    resistance_sd: float
+    conductivity: float
+    conductivity_sd: float
 
 
 def _deterministic_wrapper(
@@ -27,7 +27,7 @@ def _deterministic_wrapper(
     p = method(k, epsilon)
     p.generate_packing(radius)
     p.generate_network()
-    r = p.calculate_effective_resistance()
+    r = p.calculate_effective_conductivity(1)
     porosity = p.calculate_porosity()
     return PackingResult(porosity, r, np.nan)
 
@@ -40,7 +40,7 @@ def _nondeterministic_wrapper(
         p.generate_packing(radius, n_points=6000, max_iter=10000)
         p.generate_network()
         try:
-            return p.calculate_effective_resistance(), p.calculate_porosity(
+            return p.calculate_effective_conductivity(1), p.calculate_porosity(
                 n_points=2000
             )
         except ValueError:
@@ -58,73 +58,46 @@ def mc_porosity_resistance(
     samples: int,
     non_deterministic_repeats: int,
     k: float,
-    epsilon: float,
 ):
     rng = np.random.default_rng(seed)
 
     data = {
         "radius": [],
-#        "fixed_epsilon_regular_porosity": [],
-#        "fixed_epsilon_regular_resistance": [],
-#        "fixed_epsilon_offset_porosity": [],
-#        "fixed_epsilon_offset_resistance": [],
-#        "fixed_epsilon_lowest_first_porosity": [],
-#        "fixed_epsilon_lowest_first_resistance": [],
-#        "fixed_epsilon_closest_first_porosity": [],
-#        "fixed_epsilon_closest_first_resistance": [],
         "variable_epsilon_regular_porosity": [],
-        "variable_epsilon_regular_resistance": [],
+        "variable_epsilon_regular_conductivity": [],
         "variable_epsilon_offset_porosity": [],
-        "variable_epsilon_offset_resistance": [],
+        "variable_epsilon_offset_conductivity": [],
         "variable_epsilon_lowest_first_porosity": [],
-        "variable_epsilon_lowest_first_resistance": [],
-        "variable_epsilon_lowest_first_resistance_sd": [],
+        "variable_epsilon_lowest_first_conductivity": [],
+        "variable_epsilon_lowest_first_conductivity_sd": [],
         "variable_epsilon_closest_first_porosity": [],
-        "variable_epsilon_closest_first_resistance": [],
-        "variable_epsilon_closest_first_resistance_sd": [],
+        "variable_epsilon_closest_first_conductivity": [],
+        "variable_epsilon_closest_first_conductivity_sd": [],
     }
 
     for i, radius in enumerate(np.linspace(*radii_range, num=samples)):
         print(i)
         data["radius"].append(radius)
+        epsilon = radius/100
 
-        # fixed epsilon
-        # reg = _deterministic_wrapper(RegularPacking, k, epsilon, radius)
-        # data["fixed_epsilon_regular_resistance"].append(reg.resistance)
-        # data["fixed_epsilon_regular_porosity"].append(reg.porosity)
-        # off = _deterministic_wrapper(OffsetRegularPacking, k, epsilon, radius)
-        # data["fixed_epsilon_offset_resistance"].append(off.resistance)
-        # data["fixed_epsilon_offset_porosity"].append(off.porosity)
-        # low = _nondeterministic_wrapper(
-        #     LowestPointFirstPacking, k, epsilon, radius, non_deterministic_repeats
-        # )
-        # data["fixed_epsilon_lowest_first_resistance"].append(low.resistance)
-        # data["fixed_epsilon_lowest_first_porosity"].append(low.porosity)
-        # close = _nondeterministic_wrapper(
-        #     ClosestFirstPacking, k, epsilon, radius, non_deterministic_repeats
-        # )
-        # data["fixed_epsilon_closest_first_resistance"].append(close.resistance)
-        # data["fixed_epsilon_closest_first_porosity"].append(close.porosity)
-
-        # variable epsilon
-        reg = _deterministic_wrapper(RegularPacking, k, radius / 100, radius)
-        data["variable_epsilon_regular_resistance"].append(reg.resistance)
+        reg = _deterministic_wrapper(RegularPacking, k, epsilon, radius)
+        data["variable_epsilon_regular_conductivity"].append(reg.conductivity)
         data["variable_epsilon_regular_porosity"].append(reg.porosity)
-        off = _deterministic_wrapper(OffsetRegularPacking, k, radius / 100, radius)
-        data["variable_epsilon_offset_resistance"].append(off.resistance)
+        off = _deterministic_wrapper(OffsetRegularPacking, k, epsilon, radius)
+        data["variable_epsilon_offset_conductivity"].append(off.conductivity)
         data["variable_epsilon_offset_porosity"].append(off.porosity)
         low = _nondeterministic_wrapper(
-            LowestPointFirstPacking, k, radius / 100, radius, non_deterministic_repeats
+            LowestPointFirstPacking, k, epsilon, radius, non_deterministic_repeats
         )
-        data["variable_epsilon_lowest_first_resistance"].append(low.resistance)
+        data["variable_epsilon_lowest_first_conductivity"].append(low.conductivity)
         data["variable_epsilon_lowest_first_porosity"].append(low.porosity)
-        data["variable_epsilon_lowest_first_resistance_sd"].append(low.resistance_sd)
+        data["variable_epsilon_lowest_first_conductivity_sd"].append(low.conductivity_sd)
         close = _nondeterministic_wrapper(
-            ClosestFirstPacking, k, radius / 100, radius, non_deterministic_repeats
+            ClosestFirstPacking, k, epsilon, radius, non_deterministic_repeats
         )
-        data["variable_epsilon_closest_first_resistance"].append(close.resistance)
+        data["variable_epsilon_closest_first_conductivity"].append(close.conductivity)
         data["variable_epsilon_closest_first_porosity"].append(close.porosity)
-        data["variable_epsilon_closest_first_resistance_sd"].append(close.resistance_sd)
+        data["variable_epsilon_closest_first_conductivity_sd"].append(close.conductivity_sd)
 
         df = pd.DataFrame(data=data)
         df.to_csv(f"data_{i}.csv")
@@ -137,5 +110,4 @@ if __name__ == "__main__":
         samples=30,
         non_deterministic_repeats=20,
         k=100,
-        epsilon=1e-3,
     )

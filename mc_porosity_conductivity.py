@@ -18,7 +18,7 @@ from simulation import (
 class PackingResult:
     porosity: float
     resistance: float
-    resistance_sd = None
+    resistance_sd: float
 
 
 def _deterministic_wrapper(
@@ -29,7 +29,7 @@ def _deterministic_wrapper(
     p.generate_network()
     r = p.calculate_effective_resistance()
     porosity = p.calculate_porosity()
-    return PackingResult(porosity, r)
+    return PackingResult(porosity, r, np.nan)
 
 
 def _nondeterministic_wrapper(
@@ -44,12 +44,12 @@ def _nondeterministic_wrapper(
                 n_points=2000
             )
         except ValueError:
-            return np.nan, np.nan
+            return PackingResult(np.nan, np.nan, np.nan)
 
     with Pool() as p:
         result = p.starmap(wrapper, [() for _ in range(repeats)])
     result = np.asarray(result)
-    return PackingResult(np.nanmean(result[:, 1]), np.nanmean(result[:, 0]), restistanceeE_sd=np.std(result[:, 0]))
+    return PackingResult(np.nanmean(result[:, 1]), np.nanmean(result[:, 0]), np.std(result[:, 0]))
 
 
 def mc_porosity_resistance(
@@ -64,14 +64,14 @@ def mc_porosity_resistance(
 
     data = {
         "radius": [],
-        "fixed_epsilon_regular_porosity": [],
-        "fixed_epsilon_regular_resistance": [],
-        "fixed_epsilon_offset_porosity": [],
-        "fixed_epsilon_offset_resistance": [],
-        "fixed_epsilon_lowest_first_porosity": [],
-        "fixed_epsilon_lowest_first_resistance": [],
-        "fixed_epsilon_closest_first_porosity": [],
-        "fixed_epsilon_closest_first_resistance": [],
+#        "fixed_epsilon_regular_porosity": [],
+#        "fixed_epsilon_regular_resistance": [],
+#        "fixed_epsilon_offset_porosity": [],
+#        "fixed_epsilon_offset_resistance": [],
+#        "fixed_epsilon_lowest_first_porosity": [],
+#        "fixed_epsilon_lowest_first_resistance": [],
+#        "fixed_epsilon_closest_first_porosity": [],
+#        "fixed_epsilon_closest_first_resistance": [],
         "variable_epsilon_regular_porosity": [],
         "variable_epsilon_regular_resistance": [],
         "variable_epsilon_offset_porosity": [],
@@ -134,8 +134,8 @@ if __name__ == "__main__":
     mc_porosity_resistance(
         0x8C3C010CB4754C905776BDAC5EE7501,
         (0.04, 0.2),
-        samples=100,
-        non_deterministic_repeats=30,
+        samples=30,
+        non_deterministic_repeats=20,
         k=100,
         epsilon=1e-3,
     )

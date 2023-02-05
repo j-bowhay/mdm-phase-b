@@ -202,9 +202,9 @@ class PackingMethod:
         """
         K = np.eye(len(self.pairs), len(self.pairs))
         for i, (start_node, end_node) in enumerate(self.pairs):
-            K[i, i] = 1 / (
-                _contact_resistance_expr(self.epsilon, self.ri[start_node] / 2, self.k)
-                + _contact_resistance_expr(self.epsilon, self.ri[end_node] / 2, self.k)
+            K[i, i] = (
+                _contact_resistance_expr(self.epsilon, self.ri[start_node] / 2, self.k)**(-1)
+                + _contact_resistance_expr(self.epsilon, self.ri[end_node] / 2, self.k)**(-1)
             )
         return K
 

@@ -12,7 +12,7 @@ from multiprocess import Pool
 
 
 @lru_cache
-def _contact_resistance_expr(epsilon: float, b: float, k: float) -> float:
+def _contact_resistance_expr(epsilon: float, kappa: float, r : float, k: float) -> float:
     """Calculates contact resistance in a sphere. For derivation see
     preliminary_investigations/Contact resistance calculations.ipynb
 
@@ -21,9 +21,10 @@ def _contact_resistance_expr(epsilon: float, b: float, k: float) -> float:
     epsilon : float
         Lower limit of integration. Typically very small, control how large an area
         the spheres are in contact by.
-    b : float
+    kappa : float
         How far into the sphere to integrate. Not critical to get this term right as
         epsilon << 1 will dominate.
+    r : float
     k : float
         The thermal conductivity (W/(K·m)) of the material
 
@@ -32,7 +33,7 @@ def _contact_resistance_expr(epsilon: float, b: float, k: float) -> float:
     float
         The contact resistance in the sphere
     """
-    return (1 / (4 * math.pi * k)) * math.log((2 * b) / epsilon - 1)
+    return (1 / (4 * math.pi * k * r)) * math.log((r*(epsilon - 2*r))/(epsilon*(kappa-2*r)))
 
 
 class PackingMethod:
@@ -201,8 +202,8 @@ class PackingMethod:
         K = np.eye(len(self.pairs), len(self.pairs))
         for i, (start_node, end_node) in enumerate(self.pairs):
             K[i, i] = (
-                _contact_resistance_expr(self.epsilon, self.ri[start_node] / 2, self.k)**(-1)
-                + _contact_resistance_expr(self.epsilon, self.ri[end_node] / 2, self.k)**(-1)
+                _contact_resistance_expr(self.epsilon, self.ri[start_node], self.ri[start_node], self.k)**(-1)
+                + _contact_resistance_expr(self.epsilon, self.ri[end_node], self.ri[end_node], self.k)**(-1)
             )
         return K
 
@@ -303,11 +304,11 @@ class PackingMethod:
         # Equation 15 from Ghosh, Boyd and Saberi
         return w.size * (1 / w).sum()
 
-    def calculate_effective_resistance(self) -> float:
+    def calculate_effective_conductivity(self, flux_in) -> float:
         # good chance this can be improved by using ghost nodes
-        self.solve_network()
+        self.solve_network(total_flux_in=flux_in)
         delta_t = np.mean(self.temps[self.source_nodes])
-        return delta_t
+        return flux_in / delta_t
 
 
 class EqualRadiusPacking(PackingMethod):
@@ -685,15 +686,8 @@ def get_porosity_distribution(
 if __name__ == "__main__":
     # p = LowestFirstFromDistributionPacking(100, 1e-3)
     # p.generate_packing(scipy.stats.gamma(10, scale=0.05 / 4), n_points=1000)
-    p = OffsetRegularPacking(100, 1e-3)
+    p = OffsetRegularPacking(100, 0.0605/1000)
     p.generate_packing(0.0605370)
-    p.plot_packing()
     print(f"Packing porosity: {p.calculate_porosity()}")
     p.generate_network()
-    print(p.calculate_effective_resistance())
-    p.plot_network()
-    p.solve_network()
-    p.plot_solution()
-    print(f"Packing porosity: {p.calculate_porosity()}")
-    plt.hist(get_porosity_distribution(ClosestFirstPacking, 0.5 / 4, 100))
-    plt.show()
+    print(p.calculate_effective_conductivity(1))

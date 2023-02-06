@@ -350,6 +350,10 @@ class RegularPacking(EqualRadiusPacking):
         """
         tmp = np.arange(lim[0], lim[1], 2 * r)
         self.xi = np.array(np.meshgrid(tmp, tmp)).T.reshape(-1, 2)
+    
+    def calculate_porosity(self, n_points: int = 1000) -> float:
+        # use analytical value
+        return 1 - np.pi/4
 
 
 class OffsetRegularPacking(RegularPacking):
@@ -393,6 +397,10 @@ def _insert_disks_at_points(im: np.ndarray, coords: np.ndarray, r: int) -> np.nd
                 if (y >= 0) and (y < ylim) and s[a, b] == 1:
                     im[x, y] = 0
     return im
+    
+def calculate_porosity(self, n_points: int = 1000) -> float:
+    # use analytical value
+    return 1 - np.pi/np.sqrt(12)
 
 
 @lru_cache

@@ -202,9 +202,9 @@ class PackingMethod:
         K = np.eye(len(self.pairs), len(self.pairs))
         for i, (start_node, end_node) in enumerate(self.pairs):
             K[i, i] = (
-                _contact_resistance_expr(self.epsilon, self.ri[start_node], self.ri[start_node], self.k)**(-1)
-                + _contact_resistance_expr(self.epsilon, self.ri[end_node], self.ri[end_node], self.k)**(-1)
-            )
+                _contact_resistance_expr(self.epsilon, self.ri[start_node], self.ri[start_node], self.k)
+                + _contact_resistance_expr(self.epsilon, self.ri[end_node], self.ri[end_node], self.k)
+            )**(-1)
         return K
 
     def _get_incidence_matrix(self) -> np.ndarray:

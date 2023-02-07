@@ -122,10 +122,11 @@ class PackingMethod:
             The porosity of the packing
         """
         self._check_packing_created()
-
-        domain = np.ones((n_points, n_points))
+        # add an extract strip round sides to get a more representative value
+        n_strip = np.ceil(n_points*np.max(self.ri)).astype(int)
+        domain = np.ones((n_points + 2*n_strip, n_points + 2*n_strip))
         for r, point in zip(
-            (n_points * self.ri).astype(int), (n_points * self.xi).astype(int)
+            (n_points * self.ri).astype(int), (n_points * self.xi + n_strip).astype(int)
         ):
             domain = _insert_disks_at_points(domain, point, r)
         # trip down any rows / columns that are all one
@@ -694,8 +695,6 @@ def get_porosity_distribution(
 if __name__ == "__main__":
     # p = LowestFirstFromDistributionPacking(100, 1e-3)
     # p.generate_packing(scipy.stats.gamma(10, scale=0.05 / 4), n_points=1000)
-    p = OffsetRegularPacking(100, 0.0605/1000)
-    p.generate_packing(0.0605370)
+    p = LowestPointFirstPacking(100, 0.0605/1000)
+    p.generate_packing(0.1)
     print(f"Packing porosity: {p.calculate_porosity()}")
-    p.generate_network()
-    print(p.calculate_effective_conductivity(1))

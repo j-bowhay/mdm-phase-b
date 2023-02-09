@@ -384,6 +384,10 @@ class OffsetRegularPacking(RegularPacking):
 
         self._post_packing(r)
 
+    def calculate_porosity(self, n_points: int = 1000) -> float:
+        # use analytical value
+        return 1 - np.pi/np.sqrt(12)
+
 
 def _insert_disks_at_points(im: np.ndarray, coords: np.ndarray, r: int) -> np.ndarray:
     """
@@ -399,9 +403,6 @@ def _insert_disks_at_points(im: np.ndarray, coords: np.ndarray, r: int) -> np.nd
                     im[x, y] = 0
     return im
     
-def calculate_porosity(self, n_points: int = 1000) -> float:
-    # use analytical value
-    return 1 - np.pi/np.sqrt(12)
 
 
 @lru_cache
